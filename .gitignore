@@ -1,0 +1,26 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+.log
+local.properties
+gradlew
+gradlew.bat
+
+# --- Keystore / signing ---
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+keystore.properties
+
+/gradle/wrapper/gradle-wrapper.jar
+/gradle/wrapper/gradle-wrapper.properties
+/gradle/libs.versions.toml
+/app/.gitignore

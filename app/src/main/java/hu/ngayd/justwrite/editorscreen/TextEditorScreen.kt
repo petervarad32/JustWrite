@@ -41,33 +41,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import hu.ngayd.justwrite.R
 import hu.ngayd.justwrite.rememberImeState
+import hu.ngayd.justwrite.repository.SettingsRepository
 import hu.ngayd.justwrite.ui.theme.OrchidBranch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 
 class TextEditorScreen(
 	private val presenter: TextEditorPresenter,
 	private val onSave: () -> Unit,
 	private val onSaveAs: () -> Unit,
-	private val onOpen: () -> Unit
+	private val onOpen: () -> Unit,
+	private val onOpenSettings: () -> Unit,
 ) {
 
 	@Composable
 	fun Screen() {
 
 		val coroutineScope = rememberCoroutineScope()
-		val timerJob = remember { mutableStateOf<Job?>(null) }
-
-		val appBarText = remember { mutableStateOf("") }
-		//val text = remember { mutableStateOf(TextFieldValue("Start your story...")) }
-
 		val imeState = rememberImeState()
-		val keyboardHeight = with(LocalDensity.current) {
-			WindowInsets.ime.getBottom(LocalDensity.current).toDp()
-		}
-
 		val scrollState = rememberScrollState()
 		val textLayoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
 
@@ -99,11 +93,18 @@ class TextEditorScreen(
 
 		val interactionSource = remember { MutableInteractionSource() }
 		val isFocused = interactionSource.collectIsFocusedAsState()
+		val placeholder = TextFieldValue("Start your story...")
 
 		LaunchedEffect(isFocused.value) {
 			if (isFocused.value && presenter.getText() == placeholder.text) presenter.onTextChange(TextFieldValue(""))
 			if (!isFocused.value && presenter.getText() == "") presenter.onTextChange(placeholder)
 		}
+
+		val keyboardHeight = with(LocalDensity.current) {
+			WindowInsets.ime.getBottom(LocalDensity.current).toDp()
+		}
+		val appBarText = remember { mutableStateOf("") }
+		val timerJob = remember { mutableStateOf<Job?>(null) }
 
 		Scaffold(
 			modifier = Modifier
@@ -141,7 +142,7 @@ class TextEditorScreen(
 							appBarText.value = ""
 							timerJob.value?.cancel()
 							if (presenter.getText() != placeholder.text) {
-								timerJob.value = coroutineScope.deleteCharactersJob(appBarText)
+								timerJob.value = coroutineScope.eraseTextJob(appBarText)
 							}
 						}
 						presenter.onTextChange(it)
@@ -198,14 +199,15 @@ class TextEditorScreen(
 						contentDescription = "Save File"
 					)
 				}
-				/*IconButton(onClick = {
+				IconButton(onClick = {
 					timerJob.value?.cancel()
+					onOpenSettings()
 				}) {
 					Image(
 						painter = painterResource(id = R.drawable.settings),
 						contentDescription = "Settings"
 					)
-				}*/
+				}
 			},
 			colors = TopAppBarDefaults.topAppBarColors(
 				containerColor = OrchidBranch,
@@ -213,13 +215,12 @@ class TextEditorScreen(
 		)
 	}
 
-	private fun CoroutineScope.deleteCharactersJob(
-		appBarText: MutableState<String>,
-		durationMillis: Long = 45_000L
+	private fun CoroutineScope.eraseTextJob(
+		appBarText: MutableState<String>
 	): Job {
 		return launch {
-			delay(durationMillis - 30_000L)
-			var time = 30
+			delay(SettingsRepository.beforeTimerSeconds.intValue.seconds)
+			var time = SettingsRepository.afterTimerSeconds.intValue
 			while (time >= 0) {
 				appBarText.value = time.toString()
 				delay(1_000L)
@@ -243,6 +244,4 @@ class TextEditorScreen(
 			}
 		}
 	}
-
-	val placeholder = TextFieldValue("Start your story...")
 }

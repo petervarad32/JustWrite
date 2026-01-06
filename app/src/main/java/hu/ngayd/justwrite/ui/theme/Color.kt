@@ -11,3 +11,4 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 val OrchidBranch = Color(0xff584d5c)
+val SettingsColor = Color(0xffe0ddce)

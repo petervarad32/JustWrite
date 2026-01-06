@@ -1,7 +1,7 @@
 package hu.ngayd.justwrite.editorscreen
 
 import androidx.compose.ui.text.input.TextFieldValue
-import hu.ngayd.justwrite.TextRepository
+import hu.ngayd.justwrite.repository.TextRepository
 
 class TextEditorPresenter {
 

@@ -6,9 +6,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.input.TextFieldValue
 import hu.ngayd.justwrite.editorscreen.TextEditorPresenter
 import hu.ngayd.justwrite.editorscreen.TextEditorScreen
+import hu.ngayd.justwrite.repository.SettingsRepository
+import hu.ngayd.justwrite.repository.TextRepository
 import hu.ngayd.justwrite.ui.theme.JustWriteTheme
 
 
@@ -27,11 +31,6 @@ class MainActivity : ComponentActivity() {
 		registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
 			uri ?: return@registerForActivityResult
 
-			/*contentResolver.takePersistableUriPermission(
-				uri,
-				Intent.FLAG_GRANT_READ_URI_PERMISSION
-			)*/
-
 			val text = readFromFile(uri, contentResolver)
 			TextRepository.text.value = TextFieldValue(text)
 			TextRepository.uri = uri
@@ -41,7 +40,11 @@ class MainActivity : ComponentActivity() {
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		enableEdgeToEdge()
+		SettingsRepository.init(this)
+
 		setContent {
+			val isSettingsMode = remember { mutableStateOf(false) }
+
 			JustWriteTheme {
 				TextEditorScreen(
 					presenter = TextEditorPresenter(),
@@ -53,8 +56,15 @@ class MainActivity : ComponentActivity() {
 							writeToFile(uri, TextRepository.text.value.text, contentResolver)
 							Toast.makeText(this, "Saved!", Toast.LENGTH_SHORT).show()
 						} else createTextFileLauncher.launch("${TextRepository.text.value.text.take(15)}.txt")
-					}
+					},
+					onOpenSettings = {
+						isSettingsMode.value = true
+					},
 				).Screen()
+				if (isSettingsMode.value)
+					SettingsScreen(
+						onBack = { isSettingsMode.value = false},
+					).Screen()
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-package hu.ngayd.justwrite
+package hu.ngayd.justwrite.repository
 
 import android.net.Uri
 import androidx.compose.runtime.mutableStateOf

@@ -26,6 +26,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -41,16 +42,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import hu.ngayd.justwrite.R
 import hu.ngayd.justwrite.rememberImeState
-import hu.ngayd.justwrite.repository.SettingsRepository
 import hu.ngayd.justwrite.ui.theme.OrchidBranch
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.seconds
 
 class TextEditorScreen(
-	private val presenter: TextEditorPresenter,
+	private val pr: TextEditorPresenter,
 	private val onSave: () -> Unit,
 	private val onSaveAs: () -> Unit,
 	private val onOpen: () -> Unit,
@@ -59,15 +56,15 @@ class TextEditorScreen(
 
 	@Composable
 	fun Screen() {
-
 		val coroutineScope = rememberCoroutineScope()
 		val imeState = rememberImeState()
 		val scrollState = rememberScrollState()
 		val textLayoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+		val text = pr.textFlow.collectAsState()
 
 		//scrolling to cursor on keyboard opening
 		LaunchedEffect(imeState.value) {
-			val cursorPosition = textLayoutResult.value?.getCursorRect(presenter.getSelection().start)?.top?.toInt()
+			val cursorPosition = textLayoutResult.value?.getCursorRect(text.value.selection.start)?.top?.toInt()
 			if (imeState.value && cursorPosition != null) {
 				Log.d("oks", "max " + scrollState.maxValue.toString())
 				Log.d("oks", "scroll ${cursorPosition - 1000}")
@@ -80,8 +77,8 @@ class TextEditorScreen(
 			}
 		}
 		//scrolling to cursor while printing
-		LaunchedEffect(presenter.getSelection().end) {
-			val cursorPosition = textLayoutResult.value?.getCursorRect(presenter.getSelection().end)?.top?.toInt()
+		LaunchedEffect(text.value.selection.end) {
+			val cursorPosition = textLayoutResult.value?.getCursorRect(text.value.selection.end)?.top?.toInt()
 			if (cursorPosition != null) {
 				val scrollPosition = cursorPosition - 1000
 				coroutineScope.launch {
@@ -93,18 +90,16 @@ class TextEditorScreen(
 
 		val interactionSource = remember { MutableInteractionSource() }
 		val isFocused = interactionSource.collectIsFocusedAsState()
-		val placeholder = TextFieldValue("Start your story...")
 
+		//setting placeholder or no placeholder if text is empty
 		LaunchedEffect(isFocused.value) {
-			if (isFocused.value && presenter.getText() == placeholder.text) presenter.onTextChange(TextFieldValue(""))
-			if (!isFocused.value && presenter.getText() == "") presenter.onTextChange(placeholder)
+			if (isFocused.value && text.value.text == pr.placeholder.text) pr.onTextChange(TextFieldValue(""))
+			if (!isFocused.value && text.value.text == "") pr.onTextChange(pr.placeholder)
 		}
 
 		val keyboardHeight = with(LocalDensity.current) {
 			WindowInsets.ime.getBottom(LocalDensity.current).toDp()
 		}
-		val appBarText = remember { mutableStateOf("") }
-		val timerJob = remember { mutableStateOf<Job?>(null) }
 
 		Scaffold(
 			modifier = Modifier
@@ -112,8 +107,7 @@ class TextEditorScreen(
 			topBar = {
 				TopBar(
 					modifier = Modifier,
-					appBarText = appBarText,
-					timerJob = timerJob
+					appBarText = pr.appBarText,
 				)
 			}
 		) { innerPadding ->
@@ -133,19 +127,15 @@ class TextEditorScreen(
 						.fillMaxWidth()
 						.fillMaxHeight()
 						.padding(horizontal = 16.dp),
-					value = presenter.getValue().value,
+					value = text.value,
 					textStyle = TextStyle(
 						fontSize = 18.sp
 					),
 					onValueChange = {
-						if (it.text != presenter.getText()) {
-							appBarText.value = ""
-							timerJob.value?.cancel()
-							if (presenter.getText() != placeholder.text) {
-								timerJob.value = coroutineScope.eraseTextJob(appBarText)
-							}
+						if (it.text != text.value.text) {
+							pr.restartEraseTimer()
 						}
-						presenter.onTextChange(it)
+						pr.onTextChange(it)
 					},
 					onTextLayout = { layoutResult ->
 						textLayoutResult.value = layoutResult
@@ -161,7 +151,6 @@ class TextEditorScreen(
 	private fun TopBar(
 		modifier: Modifier,
 		appBarText: MutableState<String>,
-		timerJob: MutableState<Job?>
 	) {
 		TopAppBar(
 			modifier = modifier,
@@ -173,7 +162,6 @@ class TextEditorScreen(
 			},
 			actions = {
 				IconButton(onClick = {
-					timerJob.value?.cancel()
 					onOpen()
 				}) {
 					Image(
@@ -182,7 +170,6 @@ class TextEditorScreen(
 					)
 				}
 				IconButton(onClick = {
-					timerJob.value?.cancel()
 					onSaveAs()
 				}) {
 					Image(
@@ -191,7 +178,6 @@ class TextEditorScreen(
 					)
 				}
 				IconButton(onClick = {
-					timerJob.value?.cancel()
 					onSave()
 				}) {
 					Image(
@@ -200,7 +186,6 @@ class TextEditorScreen(
 					)
 				}
 				IconButton(onClick = {
-					timerJob.value?.cancel()
 					onOpenSettings()
 				}) {
 					Image(
@@ -213,35 +198,5 @@ class TextEditorScreen(
 				containerColor = OrchidBranch,
 			)
 		)
-	}
-
-	private fun CoroutineScope.eraseTextJob(
-		appBarText: MutableState<String>
-	): Job {
-		return launch {
-			delay(SettingsRepository.beforeTimerSeconds.intValue.seconds)
-			var time = SettingsRepository.afterTimerSeconds.intValue
-			while (time >= 0) {
-				appBarText.value = time.toString()
-				delay(1_000L)
-				time--
-			}
-			while (true) {
-				val currentValue = presenter.getValue()
-				if (currentValue.value.text.isEmpty()) {
-					appBarText.value = ""
-					break
-				}
-
-				val newText = currentValue.value.text.dropLast(1)
-				val newValue = currentValue.value.copy(
-					text = newText,
-					//selection = TextRange(newText.length)
-				)
-
-				presenter.onTextChange(newValue)
-				delay(1_000L)
-			}
-		}
 	}
 }

@@ -13,11 +13,10 @@ object SettingsRepository {
 
 	private lateinit var prefs: android.content.SharedPreferences
 
-	var eraseDelaySeconds = mutableIntStateOf(DEFAULT_ERASE_DELAY)
+	val eraseDelaySeconds = mutableIntStateOf(DEFAULT_ERASE_DELAY)
+	var beforeTimerSeconds = DEFAULT_BEFORE_TIMER_DELAY
 		private set
-	var beforeTimerSeconds = mutableIntStateOf(DEFAULT_BEFORE_TIMER_DELAY)
-		private set
-	var afterTimerSeconds = mutableIntStateOf(DEFAULT_BEFORE_TIMER_DELAY)
+	var afterTimerSeconds = DEFAULT_BEFORE_TIMER_DELAY
 		private set
 
 	fun init(context: Context) {
@@ -40,18 +39,18 @@ object SettingsRepository {
 	private fun setBeforeAfterTimerTime() {
 		when (eraseDelaySeconds.intValue) {
 			EraseDelay.SEC_30.seconds -> {
-				beforeTimerSeconds.intValue = 15
-				afterTimerSeconds.intValue = 15
+				beforeTimerSeconds = 15
+				afterTimerSeconds = 15
 			}
 
 			EraseDelay.SEC_45.seconds -> {
-				beforeTimerSeconds.intValue = 30
-				afterTimerSeconds.intValue = 15
+				beforeTimerSeconds = 30
+				afterTimerSeconds = 15
 			}
 
 			EraseDelay.SEC_60.seconds -> {
-				beforeTimerSeconds.intValue = 30
-				afterTimerSeconds.intValue = 30
+				beforeTimerSeconds = 30
+				afterTimerSeconds = 30
 			}
 		}
 	}

@@ -1,12 +1,10 @@
 package hu.ngayd.justwrite.repository
 
 import android.net.Uri
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
-
+import kotlinx.coroutines.flow.MutableStateFlow
 
 object TextRepository {
-	var text = mutableStateOf(TextFieldValue("Start your story..."))
+	val text = MutableStateFlow(TextFieldValue("Start your story..."))
 	var uri: Uri? = null
-
 }

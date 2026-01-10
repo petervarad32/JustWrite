@@ -11,6 +11,7 @@
 local.properties
 gradlew
 gradlew.bat
+/app/build
 
 # --- Keystore / signing ---
 *.jks
@@ -19,8 +20,3 @@ gradlew.bat
 *.pem
 *.key
 keystore.properties
-
-/gradle/wrapper/gradle-wrapper.jar
-/gradle/wrapper/gradle-wrapper.properties
-/gradle/libs.versions.toml
-/app/.gitignore
